@@ -17,13 +17,13 @@ struct CVector {
 // HOOK DIREVISI: Menggunakan PlaceMarkerCone (11 Parameter) sesuai crashlog!
 // Sandi: j (uint), R7CVector (CVector&), f (float), hhhh (4 uchar), t (ushort), f (float), s (short), h (uchar)
 // -------------------------------------------------------------------------
-DECL_HOOKv(PlaceMarkerCone, unsigned int id, CVector& pos, float size, unsigned char r, unsigned char g, unsigned char b, unsigned char a, unsigned short pulsePeriod, float pulseFraction, short rotateRate, unsigned char unkChar) {
+DECL_HOOKv(PlaceMarkerCone, int id, CVector& pos, float size, int r, int g, int b, int a, int pulsePeriod, float pulseFraction, int rotateRate, int unkChar) {
     
     // Ambil warna paksaan dari file konfigurasi .ini
-    unsigned char newR = (unsigned char)cfgMarkerR->GetInt();
-    unsigned char newG = (unsigned char)cfgMarkerG->GetInt();
-    unsigned char newB = (unsigned char)cfgMarkerB->GetInt();
-    unsigned char newA = (unsigned char)cfgMarkerA->GetInt();
+    int newR = cfgMarkerR->GetInt();
+    int newG = cfgMarkerG->GetInt();
+    int newB = cfgMarkerB->GetInt();
+    int newA = cfgMarkerA->GetInt();
     
     // Lanjutkan fungsi asli, TAPI ganti r, g, b, a dengan warna dari .ini kita!
     PlaceMarkerCone(id, pos, size, newR, newG, newB, newA, pulsePeriod, pulseFraction, rotateRate, unkChar);
@@ -49,4 +49,5 @@ extern "C" void OnModLoad() {
         logger->Error("Gagal menemukan libGTASA.so");
     }
 }
+
 
