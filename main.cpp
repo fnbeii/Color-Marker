@@ -16,9 +16,9 @@ struct CVector {
 uintptr_t pPlaceMarker = 0;
 uintptr_t pFindPlayerCoors = 0;
 
-void PlaceMarker_Android(unsigned int id, unsigned short type, CVector& pos, float size, unsigned char r, unsigned char g, unsigned char b, unsigned char a, unsigned short pulsePeriod, float pulseFraction, short rotateRate) {
+void PlaceMarker_Android(unsigned int id, unsigned short type, CVector& pos, float size, unsigned char r, unsigned char g, unsigned char b, unsigned char a, unsigned short pulsePeriod, float pulseFraction, short rotateRate, float unkX, float unkY, float unkZ, bool unkBool) {
     if (pPlaceMarker != 0) {
-        ((void(*)(unsigned int, unsigned short, CVector&, float, unsigned char, unsigned char, unsigned char, unsigned char, unsigned short, float, short))(pPlaceMarker + 1))(id, type, pos, size, r, g, b, a, pulsePeriod, pulseFraction, rotateRate);
+        ((void(*)(unsigned int, unsigned short, CVector&, float, unsigned char, unsigned char, unsigned char, unsigned char, unsigned short, float, short, float, float, float, bool))(pPlaceMarker + 1))(id, type, pos, size, r, g, b, a, pulsePeriod, pulseFraction, rotateRate, unkX, unkY, unkZ, unkBool);
     }
 }
 
@@ -29,25 +29,29 @@ CVector GetPlayerPos(int playerId = 0) {
     return {0.0f, 0.0f, 0.0f};
 }
 
-DECL_HOOKv(GameProcess) {
-    GameProcess(); 
+// Hook ke fungsi Idle (Jantung utama game)
+DECL_HOOKv(Idle, void* data, bool bUnk) {
+    Idle(data, bUnk); // Selalu jalankan fungsi aslinya dulu
     
+    // Ambil posisi karakter kita
     CVector markerPos = GetPlayerPos(0);
-    markerPos.y += 2.0f; 
-    markerPos.z -= 0.8f; 
     
-    // Mengambil nilai warna dari config secara dinamis tiap frame
+    // Geser marker 2 meter ke samping agar tidak berada di dalam badan CJ
+    markerPos.y += 2.0f; 
+    markerPos.z -= 0.8f; // Turunkan sedikit ke tanah
+    
+    // Ambil nilai warna langsung dari konfigurasi .ini
     unsigned char r = (unsigned char)cfgMarkerR->GetInt();
     unsigned char g = (unsigned char)cfgMarkerG->GetInt();
     unsigned char b = (unsigned char)cfgMarkerB->GetInt();
     unsigned char a = (unsigned char)cfgMarkerA->GetInt();
     
-    // Memanggil marker silinder
-    PlaceMarker_Android(1, 1, markerPos, 1.5f, r, g, b, a, 0, 0.0f, 0); 
+    PlaceMarker_Android(1, 1, markerPos, 1.5f, r, g, b, a, 0, 0.0f, 0, 0.0f, 0.0f, 0.0f, false); 
 }
 
 extern "C" void OnModLoad() {
     logger->SetTag("ColorMarker");
+    
     cfgMarkerR = cfg->Bind("Red", 255, "Color");
     cfgMarkerG = cfg->Bind("Green", 0, "Color");
     cfgMarkerB = cfg->Bind("Blue", 0, "Color");
@@ -56,12 +60,10 @@ extern "C" void OnModLoad() {
     uintptr_t libGTASA = aml->GetLib("libGTASA.so");
     
     if (libGTASA) {
-        logger->Info("libGTASA.so ditemukan!");
-        
+        logger->Info("libGTASA.so ditemukan! Hooking Idle berjalan...");
         pPlaceMarker = libGTASA + 0x5C3620; 
         pFindPlayerCoors = libGTASA + 0x40B5DC; 
-        
-        HOOK(GameProcess, libGTASA + 0x3F3FB0); 
+        HOOK(Idle, libGTASA + 0x3F68F8); 
     } else {
         logger->Error("Gagal menemukan libGTASA.so");
     }
