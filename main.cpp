@@ -2,9 +2,8 @@
 #include <mod/logger.h>
 #include <mod/config.h> 
 
-MYMOD(net.Minify.colormarker, Color Marker SAMP, 1.0, Minify)
+MYMODCFG(net.namakamu.colormarker, Color Marker SAMP, 1.0, NamaKamu)
 
-// Variabel untuk menampung data warna dari file .ini
 ConfigEntry* cfgMarkerR;
 ConfigEntry* cfgMarkerG;
 ConfigEntry* cfgMarkerB;
@@ -37,20 +36,18 @@ DECL_HOOKv(GameProcess) {
     markerPos.y += 2.0f; 
     markerPos.z -= 0.8f; 
     
-    // Mengambil nilai warna dari config
+    // Mengambil nilai warna dari config secara dinamis tiap frame
     unsigned char r = (unsigned char)cfgMarkerR->GetInt();
     unsigned char g = (unsigned char)cfgMarkerG->GetInt();
     unsigned char b = (unsigned char)cfgMarkerB->GetInt();
     unsigned char a = (unsigned char)cfgMarkerA->GetInt();
     
-    // Memanggil marker (Ukuran dipatok mati di 1.5f)
+    // Memanggil marker silinder
     PlaceMarker_Android(1, 1, markerPos, 1.5f, r, g, b, a, 0, 0.0f, 0); 
 }
 
 extern "C" void OnModLoad() {
     logger->SetTag("ColorMarker");
-    
-    // Inisialisasi Config (Bawaan: Merah Solid)
     cfgMarkerR = cfg->Bind("Red", 255, "Color");
     cfgMarkerG = cfg->Bind("Green", 0, "Color");
     cfgMarkerB = cfg->Bind("Blue", 0, "Color");
