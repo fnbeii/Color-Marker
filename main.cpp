@@ -44,8 +44,9 @@ extern "C" void OnModLoad() {
         logger->Info("libGTASA.so ditemukan! Hooking PlaceMarkerCone...");
         
         // Hook alamat 0x5C3620 dengan fungsi PlaceMarkerCone yang baru
-        HOOK(PlaceMarkerCone, libGTASA + 0x5C3620); 
+        HOOK(PlaceMarkerCone, libGTASA + 0x5C3620 + 0x1); 
     } else {
         logger->Error("Gagal menemukan libGTASA.so");
     }
 }
+
