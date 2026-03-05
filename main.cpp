@@ -1,138 +1,71 @@
-// A port from PC to Android (https://github.com/The-Musaigen/money-separator) | thanks for RusJJ
 #include <mod/amlmod.h>
-#include <mod/config.h>
 #include <mod/logger.h>
-#include <string>
+#include <mod/config.h> 
 
-MYMODCFG(net.KillerSA.moneyseparator, Money Separator, 1.5, KillerSA)
+MYMOD(net.Minify.colormarker, Color Marker SAMP, 1.0, Minify)
 
-std::string separator = ".";
-std::string centSeparator = ",";
-int displayMode = 1;
+// Variabel untuk menampung data warna dari file .ini
+ConfigEntry* cfgMarkerR;
+ConfigEntry* cfgMarkerG;
+ConfigEntry* cfgMarkerB;
+ConfigEntry* cfgMarkerA;
 
-static std::string AddSeparators(std::string aValue) 
-{
-    if (displayMode == 0 || aValue.empty()) return aValue;
+struct CVector {
+    float x, y, z;
+};
 
-    bool isNegative = false;
-    if (aValue[0] == '-') {
-        isNegative = true;
-        aValue.erase(0, 1);
+uintptr_t pPlaceMarker = 0;
+uintptr_t pFindPlayerCoors = 0;
+
+void PlaceMarker_Android(unsigned int id, unsigned short type, CVector& pos, float size, unsigned char r, unsigned char g, unsigned char b, unsigned char a, unsigned short pulsePeriod, float pulseFraction, short rotateRate) {
+    if (pPlaceMarker != 0) {
+        ((void(*)(unsigned int, unsigned short, CVector&, float, unsigned char, unsigned char, unsigned char, unsigned char, unsigned short, float, short))(pPlaceMarker + 1))(id, type, pos, size, r, g, b, a, pulsePeriod, pulseFraction, rotateRate);
     }
-
-    bool hasDollar = false;
-    if (!aValue.empty() && aValue[0] == '$') {
-        hasDollar = true;
-        aValue.erase(0, 1);
-    }
-
-    if (displayMode == 1) 
-    {
-        int len = aValue.length();
-        int size = 3;
-        while (len > size)
-        {
-            aValue.insert(len - size, separator);
-            size += 3 + separator.length(); 
-            len += separator.length();
-        }
-        
-        if (hasDollar) aValue.insert(0, "$");
-        if (isNegative) aValue.insert(0, "-");
-        
-        return aValue;
-    } 
-    else if (displayMode >= 2 && displayMode <= 5) 
-    {
-        while (aValue.length() < 3) {
-            aValue.insert(0, "0"); 
-        }
-
-        std::string cents = aValue.substr(aValue.length() - 2);
-        std::string dollars = aValue.substr(0, aValue.length() - 2);
-
-        int len = dollars.length();
-        int size = 3;
-        while (len > size)
-        {
-            dollars.insert(len - size, separator);
-            size += 3 + separator.length();
-            len += separator.length();
-        }
-
-        std::string result = dollars + centSeparator + cents;
-        
-        if (hasDollar) result = "$" + result;
-        if (isNegative) result = "-" + result; 
-        
-        return result;
-    }
-
-    return aValue;
 }
 
-DECL_HOOKv(Money_AsciiToGxtChar, const char* aSource, unsigned short* aTarget)
-{
-    if (displayMode == 0) {
-        Money_AsciiToGxtChar(aSource, aTarget);
-        return;
+CVector GetPlayerPos(int playerId = 0) {
+    if (pFindPlayerCoors != 0) {
+        return ((CVector(*)(int))(pFindPlayerCoors + 1))(playerId);
     }
-
-    std::string sep = AddSeparators(std::string(aSource));
-    Money_AsciiToGxtChar(sep.c_str(), aTarget);
+    return {0.0f, 0.0f, 0.0f};
 }
 
-extern "C" void OnModLoad()
-{
-    logger->SetTag("Money Separator");
-    cfg->Bind("Author", "", "About")->SetString("KillerSA"); cfg->ClearLast();
-    cfg->Bind("GitHub", "", "About")->SetString("https://github.com/KillerSAA/Money-Separator/tree/main"); cfg->ClearLast();
+DECL_HOOKv(GameProcess) {
+    GameProcess(); 
     
-    uintptr_t pGame = aml->GetLib("libGTASA.so");
-    if(pGame)
-    {
-        HOOKBLX(Money_AsciiToGxtChar, pGame + BYBIT(0x2BD26E + 0x1, 0x37D4C4));
-    }
-    else
-    {
-        pGame = aml->GetLib("libGTAVC.so");
-        if(pGame)
-        {
-            HOOKBL(Money_AsciiToGxtChar, pGame + BYBIT(0x1E9F74 + 0x1, 0x2C3AC8));
-        }
-        else
-        {
-            logger->Error("This game is unsupported");
-            return;
-        }
-    }
-
-    displayMode = cfg->Bind("Mode", 1, "Configs")->GetInt();
+    CVector markerPos = GetPlayerPos(0);
+    markerPos.y += 2.0f; 
+    markerPos.z -= 0.8f; 
     
-    switch (displayMode) {
-        case 1:
-            separator = ".";
-            break;
-        case 2:
-            separator = ",";         
-            centSeparator = ".";
-            break;
-        case 3:
-            separator = ".";         
-            centSeparator = ",";
-            break;
-        case 4:
-            separator = ".";         
-            centSeparator = ".";
-            break;
-        case 5:
-            separator = ",";         
-            centSeparator = ",";
-            break;
-        default:
-            displayMode = 1;
-            separator = ".";
-            break;
-    }
+    // Mengambil nilai warna dari config
+    unsigned char r = (unsigned char)cfgMarkerR->GetInt();
+    unsigned char g = (unsigned char)cfgMarkerG->GetInt();
+    unsigned char b = (unsigned char)cfgMarkerB->GetInt();
+    unsigned char a = (unsigned char)cfgMarkerA->GetInt();
+    
+    // Memanggil marker (Ukuran dipatok mati di 1.5f)
+    PlaceMarker_Android(1, 1, markerPos, 1.5f, r, g, b, a, 0, 0.0f, 0); 
 }
 
+extern "C" void OnModLoad() {
+    logger->SetTag("ColorMarker");
+    
+    // Inisialisasi Config (Bawaan: Merah Solid)
+    cfgMarkerR = cfg->Bind("Red", 255, "Color");
+    cfgMarkerG = cfg->Bind("Green", 0, "Color");
+    cfgMarkerB = cfg->Bind("Blue", 0, "Color");
+    cfgMarkerA = cfg->Bind("Alpha", 255, "Color"); 
+    
+    uintptr_t libGTASA = aml->GetLib("libGTASA.so");
+    
+    if (libGTASA) {
+        logger->Info("libGTASA.so ditemukan!");
+        
+        pPlaceMarker = libGTASA + 0x5C3620; 
+        pFindPlayerCoors = libGTASA + 0x40B5DC; 
+        
+        HOOK(GameProcess, libGTASA + 0x3F3FB0); 
+    } else {
+        logger->Error("Gagal menemukan libGTASA.so");
+    }
+}
