@@ -61,10 +61,11 @@ extern "C" void OnModLoad() {
     
     if (libGTASA) {
         logger->Info("libGTASA.so ditemukan! Hooking Idle berjalan...");
-        pPlaceMarker = libGTASA + 0x5C3620; 
-        pFindPlayerCoors = libGTASA + 0x40B5DC; 
-        HOOK(Idle, libGTASA + 0x3F68F8); 
+        pPlaceMarker = libGTASA + 0x66FC60; 
+        pFindPlayerCoors = libGTASA + 0x66F5F8; 
+        HOOK(Idle, libGTASA + 0x67059C); 
     } else {
         logger->Error("Gagal menemukan libGTASA.so");
     }
 }
+
