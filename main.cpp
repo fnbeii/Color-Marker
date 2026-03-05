@@ -12,28 +12,39 @@ ConfigEntry* cfgMarkerA;
 struct CVector {
     float x, y, z;
 };
-DECL_HOOKv(PlaceMarker, unsigned int id, unsigned short type, CVector& pos, float size, unsigned char r, unsigned char g, unsigned char b, unsigned char a, unsigned short pulsePeriod, float pulseFraction, short rotateRate, float unkX, float unkY, float unkZ, bool unkBool) {
+
+// -------------------------------------------------------------------------
+// HOOK DIREVISI: Menggunakan PlaceMarkerCone (11 Parameter) sesuai crashlog!
+// Sandi: j (uint), R7CVector (CVector&), f (float), hhhh (4 uchar), t (ushort), f (float), s (short), h (uchar)
+// -------------------------------------------------------------------------
+DECL_HOOKv(PlaceMarkerCone, unsigned int id, CVector& pos, float size, unsigned char r, unsigned char g, unsigned char b, unsigned char a, unsigned short pulsePeriod, float pulseFraction, short rotateRate, unsigned char unkChar) {
     
-    // 1. Ambil warna paksaan dari file konfigurasi .ini kamu
+    // Ambil warna paksaan dari file konfigurasi .ini
     unsigned char newR = (unsigned char)cfgMarkerR->GetInt();
     unsigned char newG = (unsigned char)cfgMarkerG->GetInt();
     unsigned char newB = (unsigned char)cfgMarkerB->GetInt();
     unsigned char newA = (unsigned char)cfgMarkerA->GetInt();
-    PlaceMarker(id, type, pos, size, newR, newG, newB, newA, pulsePeriod, pulseFraction, rotateRate, unkX, unkY, unkZ, unkBool);
+    
+    // Lanjutkan fungsi asli, TAPI ganti r, g, b, a dengan warna dari .ini kita!
+    PlaceMarkerCone(id, pos, size, newR, newG, newB, newA, pulsePeriod, pulseFraction, rotateRate, unkChar);
 }
 
 extern "C" void OnModLoad() {
     logger->SetTag("ColorMarker");
-    cfgMarkerR = cfg->Bind("Red", 0, "Color");
+    
+    // Konfigurasi bawaan: Merah Solid
+    cfgMarkerR = cfg->Bind("Red", 255, "Color");
     cfgMarkerG = cfg->Bind("Green", 0, "Color");
-    cfgMarkerB = cfg->Bind("Blue", 255, "Color");
+    cfgMarkerB = cfg->Bind("Blue", 0, "Color");
     cfgMarkerA = cfg->Bind("Alpha", 255, "Color"); 
     
     uintptr_t libGTASA = aml->GetLib("libGTASA.so");
     
     if (libGTASA) {
-        logger->Info("libGTASA.so ditemukan! Color Marker aktif...");
-        HOOK(PlaceMarker, libGTASA + 0x5C3620); 
+        logger->Info("libGTASA.so ditemukan! Hooking PlaceMarkerCone...");
+        
+        // Hook alamat 0x5C3620 dengan fungsi PlaceMarkerCone yang baru
+        HOOK(PlaceMarkerCone, libGTASA + 0x5C3620); 
     } else {
         logger->Error("Gagal menemukan libGTASA.so");
     }
