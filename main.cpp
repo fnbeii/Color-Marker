@@ -1,53 +1,51 @@
 #include <mod/amlmod.h>
+#include <mod/config.h>
 #include <mod/logger.h>
-#include <mod/config.h> 
+#include <stdint.h>
 
-MYMODCFG(net.namakamu.colormarker, Color Marker SAMP, 1.0, NamaKamu)
+MYMODCFG(mnfy.custom3dmarker, Custom 3D Marker, 1.0, mnfy)
 
-ConfigEntry* cfgMarkerR;
-ConfigEntry* cfgMarkerG;
-ConfigEntry* cfgMarkerB;
-ConfigEntry* cfgMarkerA;
+uint8_t markerRed = 255;
+uint8_t markerGreen = 0;
+uint8_t markerBlue = 0;
+uint8_t markerAlpha = 150;
 
-struct CVector {
-    float x, y, z;
-};
+DECL_HOOKv(C3dMarker_Render, void* self)
+{
+    uint8_t* pColorR = (uint8_t*)((uintptr_t)self + 0x58);
+    uint8_t* pColorG = (uint8_t*)((uintptr_t)self + 0x59);
+    uint8_t* pColorB = (uint8_t*)((uintptr_t)self + 0x5A);
+    uint8_t* pColorA = (uint8_t*)((uintptr_t)self + 0x5B);
 
-// -------------------------------------------------------------------------
-// HOOK DIREVISI: Menggunakan PlaceMarkerCone (11 Parameter) sesuai crashlog!
-// Sandi: j (uint), R7CVector (CVector&), f (float), hhhh (4 uchar), t (ushort), f (float), s (short), h (uchar)
-// -------------------------------------------------------------------------
-DECL_HOOKv(PlaceMarkerCone, int id, CVector& pos, float size, int r, int g, int b, int a, int pulsePeriod, float pulseFraction, int rotateRate, int unkChar) {
-    
-    // Ambil warna paksaan dari file konfigurasi .ini
-    int newR = cfgMarkerR->GetInt();
-    int newG = cfgMarkerG->GetInt();
-    int newB = cfgMarkerB->GetInt();
-    int newA = cfgMarkerA->GetInt();
-    
-    // Lanjutkan fungsi asli, TAPI ganti r, g, b, a dengan warna dari .ini kita!
-    PlaceMarkerCone(id, pos, size, newR, newG, newB, newA, pulsePeriod, pulseFraction, rotateRate, unkChar);
+    *pColorR = markerRed;
+    *pColorG = markerGreen;
+    *pColorB = markerBlue;
+    *pColorA = markerAlpha;
+
+    C3dMarker_Render(self);
 }
 
-extern "C" void OnModLoad() {
-    logger->SetTag("ColorMarker");
+extern "C" void OnModLoad()
+{
+    logger->SetTag("Custom3dMarker");
+    cfg->Bind("Author", "", "About")->SetString("mnfy"); cfg->ClearLast();
     
-    // Konfigurasi bawaan: Merah Solid
-    cfgMarkerR = cfg->Bind("Red", 255, "Color");
-    cfgMarkerG = cfg->Bind("Green", 0, "Color");
-    cfgMarkerB = cfg->Bind("Blue", 0, "Color");
-    cfgMarkerA = cfg->Bind("Alpha", 255, "Color"); 
-    
-    uintptr_t libGTASA = aml->GetLib("libGTASA.so");
-    
-    if (libGTASA) {
-        logger->Info("libGTASA.so ditemukan! Hooking PlaceMarkerCone...");
+    uintptr_t pGame = aml->GetLib("libGTASA.so");
+    if(pGame)
+    {
+        uintptr_t sym_MarkerRender = aml->GetSym(pGame, "_ZN9C3dMarker6RenderEv");
         
-        // Hook alamat 0x5C3620 dengan fungsi PlaceMarkerCone yang baru
-        HOOK(PlaceMarkerCone, libGTASA + 0x5C3620 + 0x1); 
-    } else {
-        logger->Error("Gagal menemukan libGTASA.so");
+        if(sym_MarkerRender) {
+            HOOK(C3dMarker_Render, sym_MarkerRender);
+        } else {
+            HOOK(C3dMarker_Render, pGame + 0x5C3160 + 0x1);
+        }
+        
+        logger->Info("Custom3dMarker V1.0 successfully loaded!");
     }
+    
+    markerRed   = cfg->Bind("Color_R", 255, "Colors")->GetInt();
+    markerGreen = cfg->Bind("Color_G", 0, "Colors")->GetInt();
+    markerBlue  = cfg->Bind("Color_B", 0, "Colors")->GetInt();
+    markerAlpha = cfg->Bind("Alpha", 150, "Colors")->GetInt();
 }
-
-
